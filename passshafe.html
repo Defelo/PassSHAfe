@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Password Safe</title>
+    <link rel="stylesheet" href="bootstrap/bootstrap.min.css">
+    <script src="jquery.min.js"></script>
+    <script src="bootstrap/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="snackbar.css">
+    <script src="passshafe.js"></script>
+    <script>
+        function showSnackbar(text) {
+            $("#snackbar").html(text).prop("className", "show");
+            setTimeout(function () {
+                $("#snackbar").prop("className", "").html("");
+            }, 3000);
+        }
+
+        let MASTERKEY = undefined;
+
+        function update() {
+            let account = $("#account").val();
+            if (!$("#pwlength").val() || $("#pwlength").val() * 1 < $("#pwlength").prop("min") * 1 || $("#pwlength").val() * 1 > $("#pwlength").prop("max") * 1) {
+                $("#genpw").val("");
+                return;
+            }
+            let result = generate_password(MASTERKEY, account, $("#pwlength").val());
+
+            $("#genpw").val(result);
+        }
+
+        function unlock() {
+            MASTERKEY = $("#masterkey").val();
+            $("#masterkey").val('');
+            $("#mastermodal").modal("hide");
+            $("#account").val('');
+            $("#pwlength").val("24");
+            update();
+            $("#account").focus();
+        }
+
+        function lock() {
+            MASTERKEY = undefined;
+            $("#account").val('');
+            $("#pwlength").val("24");
+            $("#genpw").val('');
+            $("#mastermodal").modal({backdrop: 'static', keyboard: false});
+            $("#masterkey").val('');
+            updateCanvas();
+        }
+
+        function digestToColor(digest) {
+            let r = 0, g = 0, b = 0;
+
+            for (let i = 0; i < 32; i++)
+                r += digest[i];
+            r %= 256;
+
+            let left = digest.slice(0, 16);
+            let right = digest.slice(16);
+            digest = hmac(hmac(right, left), hmac(left.reverse(), right.reverse()));
+            for (let i = 0; i < 32; i++)
+                g += digest[i];
+            g %= 256;
+
+            left = digest.slice(0, 16);
+            right = digest.slice(16);
+            digest = hmac(hmac(left.reverse(), right.reverse()), hmac(right, left));
+            for (let i = 0; i < 32; i++)
+                b += digest[i];
+            b %= 256;
+
+            return "#" + r.toString(16).padStart(2, '0') + g.toString(16).padStart(2, '0') + b.toString(16).padStart(2, '0');
+        }
+
+        function colorForNum(i) {
+            let pw = stringToAscii($("#masterkey").val()).concat(i);
+            let revpw = pw.reverse();
+            let digest = hmac(hmac(pw, revpw), hmac(revpw, pw));
+            return digestToColor(digest);
+        }
+
+        function updateCanvas() {
+            let ctx = $("#canvas")[0].getContext("2d");
+            const WIDTH = 200 / 5;
+            const HEIGHT = 200 / 5;
+            const COLOURS = 1337;
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 3; col++) {
+                    let pw = stringToAscii($("#masterkey").val()).concat([row, col]);
+                    let revpw = pw.reverse();
+                    let digest = hmac(hmac(revpw, pw), hmac(pw, revpw));
+                    let num = 0;
+                    for (let i = 0; i < 32; i++)
+                        num += expmod(256, i, COLOURS) * digest[31 - i];
+                    ctx.fillStyle = colorForNum(num % COLOURS);
+                    ctx.fillRect(col * WIDTH, row * HEIGHT, WIDTH, HEIGHT);
+                    ctx.fillRect((4 - col) * WIDTH, row * HEIGHT, WIDTH, HEIGHT);
+                }
+            }
+        }
+
+        $(function () {
+            $("#account").on('input', update).val('');
+            $("#pwlength").on('input', update).val('24');
+            $("#genpw").val('');
+
+            function copy() {
+                let focused = $(":focus");
+                $("#genpw").select();
+                document.execCommand("copy");
+                showSnackbar("Copied to Clipboard!");
+                focused.focus();
+            }
+
+            $("#account").keyup(function (e) {
+                if (e.keyCode === 13)
+                    copy();
+            });
+            $("#pwlength").keyup(function (e) {
+                if (e.keyCode === 13)
+                    copy();
+            });
+            $("#copy").click(copy);
+
+            lock();
+            $("#mastermodal").on("shown.bs.modal", function () {
+                $("#masterkey").focus();
+            });
+
+            $("#masterkeyshow").click(function () {
+                if ($("#masterkey").prop("type") === "password") {
+                    $("#masterkey").prop("type", "text");
+                    $("#mishow")[0].classList.replace("glyphicon-eye-close", "glyphicon-eye-open");
+                }
+                else {
+                    $("#masterkey").prop("type", "password");
+                    $("#mishow")[0].classList.replace("glyphicon-eye-open", "glyphicon-eye-close");
+                }
+            });
+
+            $("#genpwshow").click(function () {
+                if ($("#genpw").prop("type") === "password") {
+                    $("#genpw").prop("type", "text");
+                    $("#gishow")[0].classList.replace("glyphicon-eye-close", "glyphicon-eye-open");
+                }
+                else {
+                    $("#genpw").prop("type", "password");
+                    $("#gishow")[0].classList.replace("glyphicon-eye-open", "glyphicon-eye-close");
+                }
+            });
+
+            $("#unlockbtn").click(unlock);
+
+            $("#masterkey").keyup(function (e) {
+                if (e.keyCode === 13)
+                    unlock();
+            });
+            $("#masterkey").on("input", updateCanvas);
+        });
+    </script>
+    <style>
+        body {
+            background-color: #e0e0e0;
+        }
+
+        .main-panel {
+            margin-top: 20%;
+        }
+
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="https://github.com/Defelo/">Password Safe</a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+            <li><a href="javascript:lock()"><span class="glyphicon glyphicon-lock"></span> Lock</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="panel panel-default main-panel">
+                <div class="panel-heading text-center">
+                    Enter your Account Identifier
+                </div>
+                <div class="panel-body">
+                    <div class="row form-group">
+                        <div class="col-xs-8">
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+                                <input id="account" type="text" class="form-control"
+                                       placeholder="Account Identifier">
+                            </div>
+                        </div>
+                        <div class="col-xs-4">
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-cog"></i></span>
+                                <input id="pwlength" type="number" class="form-control"
+                                       placeholder="Password Length" min="1" max="256" value="24">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-addon"><i class="glyphicon glyphicon-random"></i></span>
+                        <input id="genpw" class="form-control" type="password" placeholder="Generated Password"
+                               readonly>
+                        <div class="input-group-btn">
+                            <button class="btn btn-default" id="genpwshow">
+                                <i id="gishow" class="glyphicon glyphicon-eye-close"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-group btn-block form-group" style="margin-top: 12px">
+                        <button id="copy" class="btn btn-primary btn-block">Copy Password to Clipboard</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="mastermodal" role="dialog">
+    <div class="modal-dialog">
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Enter your Master Password</h4>
+            </div>
+            <div class="modal-body">
+                <canvas class="center-block" style="margin-bottom: 7px" id="canvas" width="200"
+                        height="200"></canvas>
+                <div class="input-group">
+                    <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
+                    <input class="form-control" type="password" placeholder="Master Password" id="masterkey">
+                    <div class="input-group-btn">
+                        <button class="btn btn-default" id="masterkeyshow">
+                            <i id="mishow" class="glyphicon glyphicon-eye-close"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="input-group btn-block" style="margin-top: 7px">
+                    <button class="btn btn-success btn-block" id="unlockbtn">Unlock</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Snackbar -->
+<div id="snackbar"></div>
+
+</body>
+</html>
