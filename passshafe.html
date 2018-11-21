@@ -84,7 +84,7 @@
             let ctx = $("#canvas")[0].getContext("2d");
             const WIDTH = 200 / 5;
             const HEIGHT = 200 / 5;
-            const COLOURS = 1337;
+            const COLOURS = 256;
             for (let row = 0; row < 5; row++) {
                 for (let col = 0; col < 3; col++) {
                     let pw = stringToAscii($("#masterkey").val()).concat([row, col]);
@@ -107,8 +107,10 @@
 
             function copy() {
                 let focused = $(":focus");
-                $("#genpw").select();
+                let type = $("#genpw").prop("type");
+                $("#genpw").prop("type", "text").select();
                 document.execCommand("copy");
+                $("#genpw").prop("type", type).prop("selectionEnd", 0);
                 showSnackbar("Copied to Clipboard!");
                 focused.focus();
             }
