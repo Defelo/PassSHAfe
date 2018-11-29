@@ -18,6 +18,8 @@
 
         let MASTERKEY = undefined;
 
+        let canvasTimer = undefined;
+
         function update() {
             let account = $("#account").val();
             if (!$("#pwlength").val() || $("#pwlength").val() * 1 < $("#pwlength").prop("min") * 1 || $("#pwlength").val() * 1 > $("#pwlength").prop("max") * 1) {
@@ -158,7 +160,15 @@
                 if (e.keyCode === 13)
                     unlock();
             });
-            $("#masterkey").on("input", updateCanvas);
+
+            $("#masterkey").on("input", function () {
+                if (canvasTimer !== undefined)
+                    clearTimeout(canvasTimer);
+                canvasTimer = setTimeout(function () {
+                    canvasTimer = undefined;
+                    updateCanvas();
+                }, 1000);
+            });
         });
     </script>
     <style>
