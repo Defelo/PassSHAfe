@@ -2,11 +2,11 @@
 <html>
 <head>
     <title>PassSHAfe</title>
-    <link rel="stylesheet" href="bootstrap/bootstrap.min.css">
+    <link href="bootstrap/bootstrap.min.css" rel="stylesheet">
     <script src="jquery.min.js"></script>
     <script src="bootstrap/bootstrap.min.js"></script>
 
-    <link rel="stylesheet" href="snackbar.css">
+    <link href="snackbar.css" rel="stylesheet">
     <script src="passshafe.js"></script>
     <script>
         function showSnackbar(text) {
@@ -82,24 +82,33 @@
             return digestToColor(digest);
         }
 
-        function updateCanvas() {
+        function updateCanvas(step) {
             let ctx = $("#canvas")[0].getContext("2d");
             const WIDTH = 200 / 5;
             const HEIGHT = 200 / 5;
             const COLOURS = 256;
             for (let row = 0; row < 5; row++) {
                 for (let col = 0; col < 3; col++) {
-                    let pw = stringToAscii($("#masterkey").val()).concat([row, col]);
-                    let revpw = pw.reverse();
-                    let digest = hmac(hmac(revpw, pw), hmac(pw, revpw));
-                    let num = 0;
-                    for (let i = 0; i < 32; i++)
-                        num += expmod(256, i, COLOURS) * digest[31 - i];
-                    ctx.fillStyle = colorForNum(num % COLOURS);
+                    if (3 * Math.abs(row - 2) + (row % 2 === 1 ? col : (2 - col)) > step) {
+                        ctx.fillStyle = "#eeeeee";
+                    } else {
+                        let pw = stringToAscii($("#masterkey").val()).concat([row, col]);
+                        let revpw = pw.reverse();
+                        let digest = hmac(hmac(revpw, pw), hmac(pw, revpw));
+                        let num = 0;
+                        for (let i = 0; i < 32; i++)
+                            num += expmod(256, i, COLOURS) * digest[31 - i];
+                        ctx.fillStyle = colorForNum(num % COLOURS);
+                    }
                     ctx.fillRect(col * WIDTH, row * HEIGHT, WIDTH, HEIGHT);
                     ctx.fillRect((4 - col) * WIDTH, row * HEIGHT, WIDTH, HEIGHT);
                 }
             }
+            if (step < 9)
+                canvasTimer = setTimeout(function () {
+                    canvasTimer = undefined;
+                    updateCanvas(step + 1);
+                }, 100);
         }
 
         $(function () {
@@ -136,8 +145,7 @@
                 if ($("#masterkey").prop("type") === "password") {
                     $("#masterkey").prop("type", "text");
                     $("#mishow")[0].classList.replace("glyphicon-eye-close", "glyphicon-eye-open");
-                }
-                else {
+                } else {
                     $("#masterkey").prop("type", "password");
                     $("#mishow")[0].classList.replace("glyphicon-eye-open", "glyphicon-eye-close");
                 }
@@ -147,8 +155,7 @@
                 if ($("#genpw").prop("type") === "password") {
                     $("#genpw").prop("type", "text");
                     $("#gishow")[0].classList.replace("glyphicon-eye-close", "glyphicon-eye-open");
-                }
-                else {
+                } else {
                     $("#genpw").prop("type", "password");
                     $("#gishow")[0].classList.replace("glyphicon-eye-open", "glyphicon-eye-close");
                 }
@@ -166,8 +173,8 @@
                     clearTimeout(canvasTimer);
                 canvasTimer = setTimeout(function () {
                     canvasTimer = undefined;
-                    updateCanvas();
-                }, 1000);
+                    updateCanvas(0);
+                }, 100);
             });
         });
     </script>
@@ -207,30 +214,30 @@
                         <div class="col-xs-8">
                             <div class="input-group">
                                 <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
-                                <input id="account" type="text" class="form-control"
-                                       placeholder="Account Identifier">
+                                <input class="form-control" id="account" placeholder="Account Identifier"
+                                       type="text">
                             </div>
                         </div>
                         <div class="col-xs-4">
                             <div class="input-group">
                                 <span class="input-group-addon"><i class="glyphicon glyphicon-cog"></i></span>
-                                <input id="pwlength" type="number" class="form-control"
-                                       placeholder="Password Length" min="1" max="256" value="24">
+                                <input class="form-control" id="pwlength" max="256"
+                                       min="1" placeholder="Password Length" type="number" value="24">
                             </div>
                         </div>
                     </div>
                     <div class="input-group">
                         <span class="input-group-addon"><i class="glyphicon glyphicon-random"></i></span>
-                        <input id="genpw" class="form-control" type="text" placeholder="Generated Password"
-                               readonly>
+                        <input class="form-control" id="genpw" placeholder="Generated Password" readonly
+                               type="text">
                         <div class="input-group-btn">
                             <button class="btn btn-default" id="genpwshow">
-                                <i id="gishow" class="glyphicon glyphicon-eye-open"></i>
+                                <i class="glyphicon glyphicon-eye-open" id="gishow"></i>
                             </button>
                         </div>
                     </div>
                     <div class="input-group btn-block form-group" style="margin-top: 12px">
-                        <button id="copy" class="btn btn-primary btn-block">Copy Password to Clipboard</button>
+                        <button class="btn btn-primary btn-block" id="copy">Copy Password to Clipboard</button>
                     </div>
                 </div>
             </div>
@@ -248,14 +255,14 @@
                 <h4 class="modal-title">Enter your Master Password</h4>
             </div>
             <div class="modal-body">
-                <canvas class="center-block" style="margin-bottom: 7px" id="canvas" width="200"
-                        height="200"></canvas>
+                <canvas class="center-block" height="200" id="canvas" style="margin-bottom: 7px"
+                        width="200"></canvas>
                 <div class="input-group">
                     <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
-                    <input class="form-control" type="password" placeholder="Master Password" id="masterkey">
+                    <input class="form-control" id="masterkey" placeholder="Master Password" type="password">
                     <div class="input-group-btn">
                         <button class="btn btn-default" id="masterkeyshow">
-                            <i id="mishow" class="glyphicon glyphicon-eye-close"></i>
+                            <i class="glyphicon glyphicon-eye-close" id="mishow"></i>
                         </button>
                     </div>
                 </div>
