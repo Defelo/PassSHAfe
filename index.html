@@ -179,6 +179,11 @@
                     updateCanvas(0);
                 }, 100);
             });
+
+            $(document).keypress(function (e) {
+                if ((e.which == 108 || e.which == 76) && (e.ctrlKey || e.altKey))
+                    lock();
+            })
         });
     </script>
     <style>
